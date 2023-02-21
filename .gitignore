@@ -1,5 +1,6 @@
 .idea
 node_modules/
 **/dist/
+!packages/react/dist
 packages/*/stats.html
 .eslintcache
