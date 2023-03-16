@@ -23809,6 +23809,23 @@ var Stage = /*#__PURE__*/function (_React$Component) {
     _defineProperty(_assertThisInitialized(_this), "_ticker", null);
     _defineProperty(_assertThisInitialized(_this), "_needsUpdate", true);
     _defineProperty(_assertThisInitialized(_this), "app", null);
+    _defineProperty(_assertThisInitialized(_this), "listenReconcilerChanges", function () {
+      if (_this._ticker === null) {
+        _this._ticker = new ticker.Ticker();
+        _this._ticker.autoStart = true;
+        _this._ticker.add(_this.renderStage);
+        _this.app.stage.on('__REACT_PIXI_REQUEST_RENDER__', _this.needsRenderUpdate);
+      }
+    });
+    _defineProperty(_assertThisInitialized(_this), "unlistenReconcilerChanges", function () {
+      _this.app.stage.off('__REACT_PIXI_REQUEST_RENDER__');
+      if (_this._ticker) {
+        _this._ticker.remove(_this.renderStage);
+        _this._ticker.stop();
+        _this._ticker.destroy();
+        _this._ticker = null;
+      }
+    });
     _defineProperty(_assertThisInitialized(_this), "updateSize", function () {
       var _this$props = _this.props,
         width = _this$props.width,
@@ -23874,10 +23891,7 @@ var Stage = /*#__PURE__*/function (_React$Component) {
 
       // listen for reconciler changes
       if (renderOnComponentChange && !raf) {
-        this._ticker = new ticker.Ticker();
-        this._ticker.autoStart = true;
-        this._ticker.add(this.renderStage);
-        this.app.stage.on('__REACT_PIXI_REQUEST_RENDER__', this.needsRenderUpdate);
+        this.listenReconcilerChanges();
       }
       this.updateSize();
       this.renderStage();
@@ -23908,12 +23922,19 @@ var Stage = /*#__PURE__*/function (_React$Component) {
       if (prevProps.raf !== raf) {
         this.app.ticker[raf ? 'start' : 'stop']();
       }
+      // handle listen reconciler changes change
+      if (prevProps.renderOnComponentChange !== renderOnComponentChange) {
+        if (renderOnComponentChange) {
+          this.listenReconcilerChanges();
+        } else {
+          this.unlistenReconcilerChanges();
+        }
+      }
 
       // flush fiber
       PixiFiber.updateContainer(this.getChildren(), this.mountNode, this);
-      if (prevProps.width !== width || prevProps.height !== height || prevProps.raf !== raf || prevProps.renderOnComponentChange !== renderOnComponentChange || prevProps.options !== options) {
-        this._needsUpdate = true;
-        this.renderStage();
+      if (prevProps.width !== width || prevProps.height !== height || prevProps.raf !== raf || prevProps.options !== options) {
+        this.needsRenderUpdate();
       }
     }
   }, {
