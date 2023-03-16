@@ -171,13 +171,7 @@ class Stage extends React.Component
         // listen for reconciler changes
         if (renderOnComponentChange && !raf)
         {
-            this._ticker = new Ticker();
-            this._ticker.autoStart = true;
-            this._ticker.add(this.renderStage);
-            this.app.stage.on(
-                '__REACT_PIXI_REQUEST_RENDER__',
-                this.needsRenderUpdate
-            );
+            this.listenReconcilerChanges();
         }
 
         this.updateSize();
@@ -214,6 +208,18 @@ class Stage extends React.Component
         {
             this.app.ticker[raf ? 'start' : 'stop']();
         }
+        // handle listen reconciler changes change
+        if (prevProps.renderOnComponentChange !== renderOnComponentChange)
+        {
+            if (renderOnComponentChange)
+            {
+                this.listenReconcilerChanges();
+            }
+            else
+            {
+                this.unlistenReconcilerChanges();
+            }
+        }
 
         // flush fiber
         PixiFiber.updateContainer(this.getChildren(), this.mountNode, this);
@@ -222,14 +228,38 @@ class Stage extends React.Component
             prevProps.width !== width
             || prevProps.height !== height
             || prevProps.raf !== raf
-            || prevProps.renderOnComponentChange !== renderOnComponentChange
             || prevProps.options !== options
         )
         {
-            this._needsUpdate = true;
-            this.renderStage();
+            this.needsRenderUpdate();
         }
     }
+
+    listenReconcilerChanges = () =>
+    {
+        if (this._ticker === null)
+        {
+            this._ticker = new Ticker();
+            this._ticker.autoStart = true;
+            this._ticker.add(this.renderStage);
+            this.app.stage.on(
+                '__REACT_PIXI_REQUEST_RENDER__',
+                this.needsRenderUpdate
+            );
+        }
+    };
+
+    unlistenReconcilerChanges = () =>
+    {
+        this.app.stage.off('__REACT_PIXI_REQUEST_RENDER__');
+        if (this._ticker)
+        {
+            this._ticker.remove(this.renderStage);
+            this._ticker.stop();
+            this._ticker.destroy();
+            this._ticker = null;
+        }
+    };
 
     updateSize = () =>
     {
